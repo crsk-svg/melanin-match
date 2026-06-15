@@ -1169,18 +1169,30 @@
   </div>
 
   <!-- STORES PAGE -->
-  <div id="page-stores" class="page">
+    <div id="page-stores" class="page">
     <div class="section-title">📍 Find Beauty Stores</div>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Find beauty supply stores near you that carry products for Black hair and skin.</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;">Find beauty supply stores, Black-owned boutiques, and natural hair salons near you — powered by Google Maps.</p>
 
-    <div class="card" style="margin-bottom:20px">
+    <div class="card" style="margin-bottom:16px">
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Your Zipcode</label>
-        <input type="text" class="form-input" id="zipcode-input" placeholder="e.g. 60601" maxlength="5" inputmode="numeric">
+        <input type="text" class="form-input" id="zipcode-input" placeholder="e.g. 77002" maxlength="5" inputmode="numeric">
       </div>
-      <button class="btn btn-primary" onclick="findStores()" id="store-btn">
-        📍 Find Stores Near Me
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="findStores('beauty supply store')" id="store-btn" style="flex:1">
+          💄 Beauty Supply
+        </button>
+        <button class="btn" onclick="findStores('Black owned beauty salon')" style="flex:1;background:rgba(255,77,141,0.15);color:var(--pink);border:1px solid rgba(255,77,141,0.3)">
+          🖤 Black-Owned
+        </button>
+      </div>
+      <button class="btn" onclick="findStores('natural hair salon')" style="width:100%;margin-top:8px;background:rgba(255,255,255,0.05);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1)">
+        ✂️ Natural Hair Salons
       </button>
+    </div>
+
+    <div id="stores-map-container" style="display:none;border-radius:16px;overflow:hidden;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.4)">
+      <iframe id="stores-map" width="100%" height="380" style="border:0;display:block" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 
     <div id="stores-results"></div>
@@ -1794,61 +1806,40 @@
     document.querySelector('#scan-manual-tab .scanner-box')?.classList.remove('active');
   }
 
-  // ─── STORE FINDER ─────────────────────────────────────────
-  async function findStores() {
+  // ─── STORE FINDER (Google Maps Embed) ─────────────────────
+  async function findStores(searchType) {
     const zip = document.getElementById('zipcode-input').value.trim();
     if (!zip || zip.length < 5) { showToast('Please enter a valid 5-digit zipcode!'); return; }
 
     const btn = document.getElementById('store-btn');
     btn.disabled = true;
-    btn.innerHTML = '<div class="loader"></div> Finding stores...';
-    document.getElementById('stores-results').innerHTML = '<div class="loading-state"><div class="loader"></div><p style="margin-top:16px;color:var(--text-muted)">Searching near ' + zip + '...</p></div>';
+    btn.innerHTML = '<div class="loader"></div> Searching...';
+    document.getElementById('stores-results').innerHTML = '<div class="loading-state"><div class="loader"></div><p style="margin-top:16px;color:var(--text-muted)">Loading map for ' + zip + '...</p></div>';
 
-    try {
-      const res = await fetch(`${API_BASE}/findBeautyStores`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zipcode: zip })
-      });
-      const data = await res.json();
+    const query = encodeURIComponent((searchType || 'beauty supply store') + ' near ' + zip);
+    const embedUrl = 'https://www.google.com/maps/embed/v1/search?q=' + query + '&key=AIzaSyApUsOguqXS0Ll-smw2OiVs8jvLQ-NwVBM&zoom=13';
 
-      if (!data.stores || data.stores.length === 0) {
-        const fallback = data.fallback_url || `https://www.google.com/maps/search/beauty+supply+store+near+${zip}`;
-        document.getElementById('stores-results').innerHTML = `
-          <div class="empty-state">
-            <span class="empty-icon">📍</span>
-            <div class="empty-title">No stores in our map database</div>
-            <div class="empty-sub" style="margin-bottom:16px">Try searching Google Maps directly for stores near you!</div>
-            <a href="${fallback}" target="_blank" style="text-decoration:none">
-              <button class="btn btn-primary" style="max-width:280px;margin:0 auto">🗺️ Search on Google Maps</button>
-            </a>
-          </div>`;
-      } else {
-        document.getElementById('stores-results').innerHTML = `
-          <div class="section-title">${data.stores_found} Stores Near ${zip}</div>
-          ${data.stores.map(s => `
-            <div class="store-card">
-              <div class="store-icon">💄</div>
-              <div style="flex:1">
-                <div class="store-name">${s.name}</div>
-                <div class="store-addr">${s.address}${s.city ? ', ' + s.city : ''}${s.state ? ', ' + s.state : ''}</div>
-                <div class="store-dist">📍 ${s.distance_miles !== null ? s.distance_miles + ' miles away' : 'Nearby'}</div>
-                ${s.phone ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">📞 ${s.phone}</div>` : ''}
-                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-                  ${s.maps_url ? `<a href="${s.maps_url}" target="_blank" style="text-decoration:none"><span style="font-size:12px;color:var(--pink);font-weight:600">🗺️ View on Map</span></a>` : ''}
-                  ${s.website ? `<a href="${s.website}" target="_blank" style="text-decoration:none"><span style="font-size:12px;color:var(--pink);font-weight:600">🔗 Website</span></a>` : ''}
-                </div>
-              </div>
-            </div>`).join('')}
-          <div style="padding-bottom:32px"></div>`;
-      }
-    } catch(e) {
-      document.getElementById('stores-results').innerHTML = `<div class="card" style="color:var(--red);text-align:center">❌ Could not find stores. Please try again.</div>`;
-    }
+    const mapContainer = document.getElementById('stores-map-container');
+    const mapIframe = document.getElementById('stores-map');
+    mapIframe.src = embedUrl;
+    mapContainer.style.display = 'block';
+
+    const mapsSearchUrl = 'https://www.google.com/maps/search/' + query;
+    document.getElementById('stores-results').innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' +
+        '<a href="' + mapsSearchUrl + '" target="_blank" style="text-decoration:none;flex:1">' +
+          '<button class="btn btn-primary" style="width:100%;font-size:13px">🗺️ Open Full Map</button>' +
+        '</a>' +
+        '<a href="https://www.google.com/maps/dir/?api=1&destination=' + query + '" target="_blank" style="text-decoration:none;flex:1">' +
+          '<button class="btn" style="width:100%;font-size:13px;background:rgba(255,77,141,0.15);color:var(--pink);border:1px solid rgba(255,77,141,0.3)">🧭 Get Directions</button>' +
+        '</a>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0 24px">Tap any pin on the map to see store details, hours & reviews</div>';
 
     btn.disabled = false;
-    btn.innerHTML = '📍 Find Stores Near Me';
+    btn.innerHTML = '💄 Beauty Supply';
   }
+
 
   // ─── PROFILE ──────────────────────────────────────────────
   function switchProfileTab(tab) {

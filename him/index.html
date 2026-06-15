@@ -445,10 +445,15 @@
 <!-- STORES -->
 <div id="page-stores" class="page">
   <div class="section-title">📍 Find Stores Near You</div>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">Find grooming shops, Black-owned barbershops, and beauty supply near you — powered by Google Maps.</p>
   <div class="form-group"><label class="form-label">ZIP Code</label><input type="text" class="form-input" id="zip-input" placeholder="e.g. 77001" maxlength="5"></div>
-  <div style="display:flex;gap:10px;margin-bottom:16px">
-    <button class="btn btn-primary" onclick="findStores()" style="flex:1">📍 Find Stores</button>
-    <button class="btn btn-outline" onclick="toggleBO()" id="bo-toggle" style="flex:1">🖤 Black-Owned</button>
+  <div style="display:flex;gap:10px;margin-bottom:8px">
+    <button class="btn btn-primary" onclick="findStores('grooming supply store')" id="store-btn" style="flex:1">🪒 Grooming</button>
+    <button class="btn btn-outline" onclick="findStores('Black owned barbershop')" style="flex:1">🖤 Black-Owned</button>
+  </div>
+  <button class="btn btn-outline" onclick="findStores('beauty supply store')" style="width:100%;margin-bottom:16px">💄 Beauty Supply</button>
+  <div id="stores-map-container" style="display:none;border-radius:16px;overflow:hidden;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.4)">
+    <iframe id="stores-map" width="100%" height="380" style="border:0;display:block" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
   </div>
   <div id="stores-result"></div>
 </div>
@@ -848,19 +853,26 @@ function toggleBO(){
   btn.className=boOnly?"btn btn-primary":"btn btn-outline";
   btn.textContent=boOnly?"🖤 Black-Owned ✓":"🖤 Black-Owned";
 }
-async function findStores(){
-  const zip=document.getElementById("zip-input").value.trim();
-  if(!zip||zip.length<5){showToast("Enter a valid ZIP code");return;}
-  const el=document.getElementById("stores-result");
-  el.innerHTML=`<p style="color:var(--text-muted);text-align:center;padding:20px">🔍 Finding stores near ${zip}...</p>`;
-  try{
-    const r=await fetch(`${BASE}/entities/findBeautyStores`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zipcode:zip,black_owned_only:boOnly})});
-    const d=await r.json();
-    if(d&&d.stores&&d.stores.length){
-      el.innerHTML=`<div class="section-title">${d.stores.length} Stores Near ${zip}</div>`+d.stores.map(s=>`<div class="store-card"><div style="display:flex;justify-content:space-between"><div><div style="font-size:14px;font-weight:700">${s.name}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.address}, ${s.city}</div>${s.is_black_owned?'<span class="badge badge-black-owned" style="margin-top:6px;display:inline-block">🖤 Black-Owned</span>':""}
-      </div>${s.rating?`<div style="font-size:13px;font-weight:700;color:var(--gold)">⭐ ${s.rating}</div>`:""}</div>${s.phone?`<div style="font-size:12px;color:var(--text-muted);margin-top:6px">📞 ${s.phone}</div>`:""}</div>`).join("");
-    }else{el.innerHTML=`<p style="color:var(--text-muted);text-align:center;padding:20px">No stores found for that ZIP. Try a nearby ZIP.</p>`;}
-  }catch(e){el.innerHTML=`<p style="color:var(--text-muted);text-align:center;padding:20px">Store lookup unavailable. Try again shortly.</p>`;}
+async function findStores(searchType){
+  const zip=document.getElementById('zip-input').value.trim();
+  if(!zip||zip.length<5){showToast('Enter a valid ZIP code');return;}
+  const btn=document.getElementById('store-btn');
+  if(btn) btn.disabled=true;
+  const el=document.getElementById('stores-result');
+  el.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">Loading map for '+zip+'...</p>';
+
+  const query=encodeURIComponent((searchType||'grooming supply store')+' near '+zip);
+  const embedUrl='https://www.google.com/maps/embed/v1/search?q='+query+'&key=AIzaSyApUsOguqXS0Ll-smw2OiVs8jvLQ-NwVBM&zoom=13';
+
+  const mapContainer=document.getElementById('stores-map-container');
+  const mapIframe=document.getElementById('stores-map');
+  mapIframe.src=embedUrl;
+  mapContainer.style.display='block';
+
+  const mapsUrl='https://www.google.com/maps/search/'+query;
+  el.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'+'<a href="'+mapsUrl+'" target="_blank" style="text-decoration:none;flex:1">'+'<button class="btn btn-primary" style="width:100%;font-size:13px">🗺️ Open Full Map</button></a>'+'<a href="https://www.google.com/maps/dir/?api=1&destination='+query+'" target="_blank" style="text-decoration:none;flex:1">'+'<button class="btn btn-outline" style="width:100%;font-size:13px">🧭 Get Directions</button></a></div>'+'<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0 24px">Tap any pin on the map for details, hours & reviews</div>';
+
+  if(btn) btn.disabled=false;
 }
 
 function showRtTab(tab){
