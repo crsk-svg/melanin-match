@@ -1743,7 +1743,7 @@
 
   async function findDupes() {
     const productId = document.getElementById('dupe-product-select').value;
-    const maxPrice = document.getElementById('dupe-max-price').value;
+    const maxPrice = parseFloat(document.getElementById('dupe-max-price').value) || null;
     if (!productId) { showToast('Please pick a product first!'); return; }
 
     const btn = document.getElementById('dupe-btn');
@@ -1752,65 +1752,105 @@
     document.getElementById('dupe-results').innerHTML = '<div class="loading-state"><div class="loader"></div><p style="margin-top:12px;color:var(--text-muted)">Finding cheaper alternatives...</p></div>';
 
     try {
-      const payload = { product_id: productId, limit: 5 };
-      if (maxPrice) payload.max_price = parseFloat(maxPrice);
+      // Client-side dupe matching — no backend call needed, works everywhere
+      const KEY_INGREDIENT_KEYWORDS = [
+        'shea butter','coconut oil','argan oil','castor oil','glycerin',
+        'aloe vera','rosemary','tea tree','niacinamide','vitamin c',
+        'hyaluronic acid','baobab','jojoba','avocado','olive oil',
+        'black seed','biotin','panthenol','keratin','collagen',
+        'honey','vitamin e','salicylic acid','kojic acid','alpha arbutin',
+        'tranexamic acid','sunflower','babassu','mango butter','cocoa butter',
+        'peppermint','lavender','rice water','silk','flaxseed',
+        'bentonite','marshmallow root','fenugreek','amla','bhringraj'
+      ];
 
-      const res = await fetch(`${API_BASE}/findDupes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
+      function extractKeyIngs(ingredients) {
+        const lower = (ingredients || []).map(i => i.toLowerCase());
+        return KEY_INGREDIENT_KEYWORDS.filter(kw => lower.some(i => i.includes(kw)));
+      }
 
-      const src = data.source_product;
-      const dupes = data.dupes || [];
-      const extDupes = data.external_dupes || [];
-      const allDupes = [...dupes, ...extDupes];
+      function calcMatch(a, b) {
+        if (!a.length || !b.length) return 0;
+        const sa = new Set(a), sb = new Set(b);
+        const inter = [...sa].filter(k => sb.has(k));
+        const union = new Set([...sa, ...sb]);
+        return Math.round((inter.length / union.size) * 100);
+      }
 
+      // Make sure products are loaded
+      if (!allProducts || allProducts.length === 0) await loadProducts();
+
+      const src = allProducts.find(p => p.id === productId);
+      if (!src) throw new Error('Source product not found');
+
+      const srcKeyIngs = extractKeyIngs(src.ingredients);
+      const srcPrice = parseFloat(src.price) || 0;
+
+      const dupes = allProducts
+        .filter(p => {
+          if (p.id === productId) return false;
+          const pPrice = parseFloat(p.price) || 0;
+          if (srcPrice > 0 && pPrice >= srcPrice) return false; // must be cheaper
+          if (maxPrice && pPrice > maxPrice) return false;
+          return true;
+        })
+        .map(p => {
+          const pKeyIngs = extractKeyIngs(p.ingredients);
+          const ingredientMatch = calcMatch(srcKeyIngs, pKeyIngs);
+          const sharedIngs = srcKeyIngs.filter(k => pKeyIngs.includes(k));
+          const categoryBonus = (p.category === src.category ? 15 : 0) + (p.subcategory === src.subcategory ? 10 : 0);
+          const matchScore = Math.min(100, ingredientMatch + categoryBonus);
+          const pPrice = parseFloat(p.price) || 0;
+          const savings = srcPrice > 0 ? parseFloat((srcPrice - pPrice).toFixed(2)) : null;
+          return { ...p, match_score: matchScore, shared_ingredients: sharedIngs, savings, savings_pct: savings && srcPrice ? Math.round((savings / srcPrice) * 100) : null };
+        })
+        .filter(p => p.match_score >= 15)
+        .sort((a, b) => b.match_score - a.match_score)
+        .slice(0, 6);
+
+      // Source product card
       let html = `
         <div class="card" style="margin-top:20px;background:linear-gradient(135deg,rgba(233,30,99,0.08),rgba(233,30,99,0.02));border:1.5px solid var(--pink)">
           <div style="font-size:11px;color:var(--pink);font-weight:700;letter-spacing:1px;margin-bottom:6px">ORIGINAL PRODUCT</div>
           <div style="font-weight:800;font-size:15px;margin-bottom:2px">${src.name}</div>
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">${src.brand}</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <span style="font-size:18px;font-weight:800;color:var(--pink)">$${src.price}</span>
-            <span style="font-size:13px;color:var(--text-muted);align-self:center">Safety: ${src.safety_score}/100</span>
+            ${src.price ? `<span style="font-size:18px;font-weight:800;color:var(--pink)">$${src.price}</span>` : ''}
+            ${src.safety_score ? `<span style="font-size:13px;color:var(--text-muted);align-self:center">Safety: ${src.safety_score}/100</span>` : ''}
           </div>
-          <div style="margin-top:10px;font-size:12px;color:var(--text-muted)">Key ingredients: <span style="color:var(--text-primary);font-weight:600">${(src.key_ingredients||[]).join(', ')}</span></div>
+          ${srcKeyIngs.length > 0 ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">Key ingredients: <span style="color:var(--text-primary);font-weight:600">${srcKeyIngs.join(', ')}</span></div>` : ''}
         </div>`;
 
-      if (allDupes.length === 0) {
+      if (dupes.length === 0) {
         html += `<div class="card" style="text-align:center;margin-top:16px">
           <div style="font-size:32px;margin-bottom:12px">🔍</div>
           <div style="font-weight:700;margin-bottom:8px">No dupes found yet</div>
           <div style="font-size:13px;color:var(--text-muted)">Our database is growing! Try a different product or adjust your budget.</div>
         </div>`;
       } else {
-        html += `<div class="section-title" style="margin-top:20px">✨ ${allDupes.length} Cheaper Alternative${allDupes.length > 1 ? 's' : ''} Found</div>`;
-
-        allDupes.forEach((d, i) => {
+        html += `<div class="section-title" style="margin-top:20px">✨ ${dupes.length} Cheaper Alternative${dupes.length > 1 ? 's' : ''} Found</div>`;
+        dupes.forEach((d, i) => {
           const matchColor = d.match_score >= 70 ? 'var(--green)' : d.match_score >= 40 ? 'var(--orange)' : 'var(--text-muted)';
-          const savingsText = d.savings ? `Save $${d.savings} (${d.savings_pct}% less)` : 'Price not available';
-          const isExternal = d.source === 'openbeautyfacts';
+          const savingsText = d.savings && d.savings > 0 ? `Save $${d.savings} (${d.savings_pct}% less)` : 'Great alternative';
           html += `
             <div class="product-card" style="margin-bottom:16px;position:relative">
               ${i === 0 ? '<div style="position:absolute;top:12px;right:12px;background:var(--pink);color:white;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">BEST DUPE</div>' : ''}
               ${d.image_url ? `<img src="${d.image_url}" class="product-img" onerror="this.style.display='none'">` : '<div class="product-img-placeholder">💄</div>'}
               <div class="product-body">
-                <div class="product-brand">${d.brand}${isExternal ? ' <span style="font-size:10px;color:var(--text-muted)">(via Open Beauty)</span>' : ''}</div>
+                <div class="product-brand">${d.brand}${d.is_black_owned ? ' <span style="font-size:10px;color:var(--gold)">★ Black-Owned</span>' : ''}</div>
                 <div class="product-name">${d.name}</div>
                 <div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">
                   ${d.price ? `<span style="font-size:16px;font-weight:800;color:var(--green)">$${d.price}</span>` : '<span style="font-size:13px;color:var(--text-muted)">Price varies</span>'}
                   <span style="font-size:11px;font-weight:700;color:var(--green);background:rgba(0,200,83,0.1);padding:3px 8px;border-radius:20px">${savingsText}</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-                  <div style="width:80px;height:6px;background:#f0f0f0;border-radius:4px;overflow:hidden">
+                  <div style="width:80px;height:6px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden">
                     <div style="width:${d.match_score}%;height:100%;background:${matchColor};border-radius:4px"></div>
                   </div>
                   <span style="font-size:12px;font-weight:700;color:${matchColor}">${d.match_score}% match</span>
                 </div>
-                ${d.shared_ingredients && d.shared_ingredients.length > 0 ? `<div style="font-size:11px;color:var(--text-muted)">Shared: <span style="color:var(--text-primary);font-weight:600">${d.shared_ingredients.join(', ')}</span></div>` : ''}
-                ${d.safety_score ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Safety Score: <span style="font-weight:700;color:var(--green)">${d.safety_score}/100</span></div>` : ''}
+                ${d.shared_ingredients && d.shared_ingredients.length > 0 ? `<div style="font-size:11px;color:var(--text-muted)">Shared key ingredients: <span style="color:var(--text-primary);font-weight:600">${d.shared_ingredients.join(', ')}</span></div>` : ''}
+                ${d.safety_score ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Safety: <span style="font-weight:700;color:var(--green)">${d.safety_score}/100</span></div>` : ''}
                 ${d.where_to_buy ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">📍 ${d.where_to_buy}</div>` : ''}
               </div>
             </div>`;
@@ -1821,7 +1861,8 @@
       document.getElementById('dupe-results').innerHTML = html;
 
     } catch(e) {
-      document.getElementById('dupe-results').innerHTML = '<div class="card" style="color:var(--red);text-align:center;margin-top:16px">❌ Something went wrong. Please try again.</div>';
+      console.error('findDupes error:', e);
+      document.getElementById('dupe-results').innerHTML = `<div class="card" style="color:var(--red);text-align:center;margin-top:16px">❌ ${e.message || 'Something went wrong. Please try again.'}</div>`;
     }
 
     btn.disabled = false;
