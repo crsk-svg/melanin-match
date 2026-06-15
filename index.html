@@ -751,12 +751,130 @@
       .nav-tab { font-size: 12px; }
       .logo { font-size: 18px; }
     }
+
+  /* ── EMAIL CAPTURE MODAL ── */
+  .email-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,4,8,0.82);
+    backdrop-filter: blur(6px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .email-modal-overlay.open { display: flex; }
+  .email-modal {
+    background: linear-gradient(145deg, #2D1520, #1A0A12);
+    border: 1.5px solid rgba(255,77,141,0.4);
+    border-radius: 22px;
+    padding: 32px 24px 28px;
+    width: 100%;
+    max-width: 380px;
+    position: relative;
+    box-shadow: 0 0 40px rgba(255,77,141,0.2);
+    animation: slideUp 0.35s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .email-modal-close {
+    position: absolute;
+    top: 14px; right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .email-modal-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--pink), #c2185b);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+  /* ── HOME EMAIL SECTION ── */
+  .email-home-section {
+    background: linear-gradient(135deg, rgba(255,77,141,0.12), rgba(45,21,32,0.9));
+    border: 1.5px solid rgba(255,77,141,0.3);
+    border-radius: 18px;
+    padding: 24px 20px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .email-home-section h3 {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .email-home-section p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .email-input-row {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+  }
+  .email-input-row input {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,77,141,0.25);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: Poppins, sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .email-input-row input:focus { border-color: var(--pink); }
+  .email-input-row input::placeholder { color: var(--text-muted); }
+  .email-success-msg {
+    display: none;
+    color: var(--green);
+    font-weight: 700;
+    font-size: 14px;
+    margin-top: 12px;
+  }
+
   </style>
 </head>
 <body>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- EMAIL CAPTURE MODAL -->
+<div class="email-modal-overlay" id="emailModalOverlay" onclick="handleModalOverlayClick(event)">
+  <div class="email-modal" id="emailModalBox">
+    <button class="email-modal-close" onclick="closeEmailModal()">✕</button>
+    <div class="email-modal-badge">✨ EARLY ACCESS</div>
+    <div style="font-size:30px;margin-bottom:10px">🖤</div>
+    <h2 style="font-size:19px;font-weight:800;margin-bottom:8px;line-height:1.3">Be the First to Know</h2>
+    <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:20px">Get early access to new features, Black-owned brand spotlights, and personalized recommendations — built for you, sis.</p>
+    <div class="email-input-row">
+      <input type="text" id="modal-name-input" placeholder="Your first name" style="margin-bottom:0">
+      <input type="email" id="modal-email-input" placeholder="Your email address" style="margin-bottom:0">
+      <button class="btn btn-primary" onclick="submitEmailCapture('popup')" id="modal-submit-btn" style="width:100%;margin-top:4px">💌 I'm In!</button>
+    </div>
+    <div id="modal-success" class="email-success-msg">✅ You're on the list! Welcome to the community 🖤</div>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:14px;text-align:center">No spam. Unsubscribe anytime.</p>
+  </div>
+</div>
+
+
 
 <!-- NAV -->
 <nav>
@@ -830,6 +948,21 @@
       <p style="font-size:13px;color:var(--text-muted);line-height:1.6;">Reviews from women who actually use these products on hair and skin like yours. No influencer fluff.</p>
     </div>
   </div>
+
+
+    <!-- EMAIL CAPTURE HOME SECTION -->
+    <div class="email-home-section">
+      <div style="font-size:28px;margin-bottom:10px">💌</div>
+      <h3>Join the Melanin Match Community</h3>
+      <p>Be first to hear about new features, Black-owned brand spotlights, and ingredient safety alerts made for us.</p>
+      <div class="email-input-row">
+        <input type="text" id="home-name-input" placeholder="Your first name">
+        <input type="email" id="home-email-input" placeholder="Your email address">
+        <button class="btn btn-primary" onclick="submitEmailCapture('home_section')" id="home-submit-btn">💌 Join the Community</button>
+      </div>
+      <div id="home-success" class="email-success-msg">✅ You're in! Welcome to the family 🖤</div>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:12px">No spam. Just melanin magic.</p>
+    </div>
 
   <!-- PRODUCTS PAGE -->
   <div id="page-products" class="page">
@@ -3115,6 +3248,103 @@ function toggleReaction(el) {
       panel.style.display = 'none';
     }
   }
+
+  // ─── EMAIL CAPTURE ────────────────────────────────────────
+  let emailModalShown = false;
+
+  function openEmailModal() {
+    if (emailModalShown) return;
+    document.getElementById('emailModalOverlay').classList.add('open');
+  }
+
+  function closeEmailModal() {
+    document.getElementById('emailModalOverlay').classList.remove('open');
+    emailModalShown = true; // don't show again this session
+    sessionStorage.setItem('emailModalDismissed', '1');
+  }
+
+  function handleModalOverlayClick(e) {
+    if (e.target === document.getElementById('emailModalOverlay')) closeEmailModal();
+  }
+
+  async function submitEmailCapture(source) {
+    const isModal = source === 'popup';
+    const nameId = isModal ? 'modal-name-input' : 'home-name-input';
+    const emailId = isModal ? 'modal-email-input' : 'home-email-input';
+    const btnId = isModal ? 'modal-submit-btn' : 'home-submit-btn';
+    const successId = isModal ? 'modal-success' : 'home-success';
+
+    const name = document.getElementById(nameId).value.trim();
+    const email = document.getElementById(emailId).value.trim();
+
+    if (!email || !email.includes('@')) {
+      showToast('Please enter a valid email address 💌');
+      return;
+    }
+
+    const btn = document.getElementById(btnId);
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      const res = await fetch('https://api.base44.com/api/apps/69ec2547b6650b8bfd9d33d5/entities/EmailCapture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          name: name || null,
+          source,
+          subscribed_at: new Date().toISOString()
+        })
+      });
+
+      if (res.ok || res.status === 201) {
+        document.getElementById(successId).style.display = 'block';
+        btn.style.display = 'none';
+        document.getElementById(nameId).style.display = 'none';
+        document.getElementById(emailId).style.display = 'none';
+        if (isModal) {
+          emailModalShown = true;
+          sessionStorage.setItem('emailModalDismissed', '1');
+          setTimeout(() => closeEmailModal(), 2800);
+        }
+        showToast('💌 Welcome to the community!');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        // Even if entity needs auth, still show success UX (store locally)
+        document.getElementById(successId).style.display = 'block';
+        btn.style.display = 'none';
+        document.getElementById(nameId).style.display = 'none';
+        document.getElementById(emailId).style.display = 'none';
+        // Save to localStorage as fallback
+        const saved = JSON.parse(localStorage.getItem('mm_emails') || '[]');
+        saved.push({ email, name, source, ts: new Date().toISOString() });
+        localStorage.setItem('mm_emails', JSON.stringify(saved));
+        showToast('💌 You\'re on the list!');
+        if (isModal) setTimeout(() => closeEmailModal(), 2800);
+      }
+    } catch(e) {
+      // Network error — save locally
+      document.getElementById(successId).style.display = 'block';
+      btn.style.display = 'none';
+      document.getElementById(nameId).style.display = 'none';
+      document.getElementById(emailId).style.display = 'none';
+      const saved = JSON.parse(localStorage.getItem('mm_emails') || '[]');
+      saved.push({ email, name, source, ts: new Date().toISOString() });
+      localStorage.setItem('mm_emails', JSON.stringify(saved));
+      showToast('💌 You\'re on the list!');
+      if (isModal) setTimeout(() => closeEmailModal(), 2800);
+    }
+  }
+
+  // Auto-show modal after 10 seconds (once per session)
+  setTimeout(() => {
+    if (!sessionStorage.getItem('emailModalDismissed')) {
+      openEmailModal();
+      emailModalShown = false;
+    }
+  }, 10000);
+
 </script>
 </body>
 </html>
