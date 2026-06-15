@@ -849,6 +849,28 @@
     margin-top: 12px;
   }
 
+
+  /* ── SWITCHER BANNER ── */
+  .switcher-banner {
+    background: linear-gradient(135deg, #1A0A12, #0A0A0A);
+    border-bottom: 1px solid rgba(198,40,40,0.3);
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 480px; margin: 0 auto;
+  }
+  .switcher-label { font-size: 11px; color: #888; font-weight: 600; letter-spacing: 0.5px; }
+  .switcher-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, #C62828, #7F0000);
+    color: white; border: none; border-radius: 20px;
+    padding: 7px 16px; font-family: Poppins, sans-serif;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    text-decoration: none; letter-spacing: 0.3px;
+    box-shadow: 0 2px 10px rgba(198,40,40,0.35);
+    transition: all 0.2s;
+  }
+  .switcher-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(198,40,40,0.5); }
+  .switcher-him-tag { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; background: rgba(255,215,0,0.2); color: #FFD700; border: 1px solid rgba(255,215,0,0.4); border-radius: 5px; padding: 1px 5px; }
   </style>
 </head>
 <body>
@@ -875,6 +897,15 @@
 </div>
 
 
+
+
+<!-- SWITCHER BANNER -->
+<div class="switcher-banner">
+  <span class="switcher-label">🌸 You're on Melanin Match HER</span>
+  <a href="/melanin-match/him/index.html" class="switcher-btn">
+    Switch to <span class="switcher-him-tag">HIM</span> 👑
+  </a>
+</div>
 
 <!-- NAV -->
 <nav>
